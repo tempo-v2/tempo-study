@@ -1,29 +1,6 @@
-use std::error::Error;
-use std::fmt;
+//! Compatibility import for Study's transition error.
+//!
+//! The definition and caller-facing usage scenario live in [`crate::study_error`].
+//! Study's operations are [`crate::next`], [`crate::submit()`], and [`crate::abandon()`].
 
-use tempo_types::Revision;
-
-use crate::grader::GradingError;
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum StudyError {
-    RevisionConflict {
-        expected: Revision,
-        actual: Revision,
-    },
-    ClosedAttempt,
-    RevisionExhausted,
-    InvalidGraderTransition,
-    Grading(GradingError),
-}
-impl fmt::Display for StudyError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-impl Error for StudyError {}
-impl From<GradingError> for StudyError {
-    fn from(value: GradingError) -> Self {
-        Self::Grading(value)
-    }
-}
+pub use crate::study_error::StudyError;

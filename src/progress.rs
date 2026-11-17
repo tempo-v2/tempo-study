@@ -1,49 +1,45 @@
+//! The answer transition Study proposes for the app to commit.
+//!
+//! Use [`Progress`] after [`crate::submit()`]. Persist its attempt and project its
+//! feedback to presentation. Feed `assessment` to Learning only when it is `Some`:
+//! it means **newly emitted now**. `attempt.terminal` is the lifetime outcome and
+//! must not be fed to Learning again on every correction.
+
+use crate::Attempt;
 use serde::{Deserialize, Serialize};
+use tempo_types::Grade;
 
-use crate::{attempt::Attempt, grader::Grade};
-
-/// Represents the progress of an attempt, including the updated attempt state,
-/// feedback from the grader, and any newly emitted assessment.
-///
-/// # Expected behavior
-/// The `Progress` struct captures the result of applying a grader's feedback to an attempt.
-/// The `attempt` field reflects the updated state, `feedback` contains the grader's feedback,
-/// and `assessment` includes any newly emitted assessment, if applicable.
+/// Proposed attempt state, per-answer feedback, and at most one new outcome.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Progress<S, P, F> {
-    /// The updated attempt state after applying the grader's feedback.
+    /// Replacement attempt state; inputs to Study remain unchanged.
     pub attempt: Attempt<S, P>,
-    /// Feedback from the grader corresponding to the latest attempt update.
+    /// Feedback for the latest answer, even if no new assessment was emitted.
     pub feedback: F,
-    /// Newly emitted assessment only. `attempt.terminal` is the sticky lifetime result.
+    /// Newly emitted assessment only; absent after an earlier terminal outcome.
     pub assessment: Option<Grade>,
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::attempt::AttemptStatus;
+    use crate::{
+        submit,
+        test_support::{ChoiceGrader, issued_choice},
+    };
+    use tempo_types::{Grade, Revision};
 
     #[test]
-    fn test_progress_creation() {
-        let attempt = Attempt {
-            revision: 1.into(),
-            status: AttemptStatus::Active,
-            state: (),
-            prompt: None,
-            terminal: None,
-            id: todo!(),
-            dataset: todo!(),
-            target: todo!(),
-            content_version: todo!(),
-        };
-        let progress = Progress {
-            attempt: attempt.clone(),
-            feedback: true,
-            assessment: Some(Grade::Good),
-        };
-        assert_eq!(progress.attempt, attempt);
-        assert_eq!(progress.feedback, true);
-        assert_eq!(progress.assessment, Some(Grade::Good));
+    fn a_consumer_records_only_new_assessments_while_still_showing_correction_feedback() {
+        let miss = submit(&ChoiceGrader, &'B', &issued_choice(), Revision(0), &'A').unwrap();
+        let correction = submit(&ChoiceGrader, &'B', &miss.attempt, Revision(1), &'B').unwrap();
+
+        let outcomes: Vec<_> = [miss.assessment, correction.assessment]
+            .into_iter()
+            .flatten()
+            .collect();
+        assert_eq!(outcomes, vec![Grade::Again]);
+        assert!(correction.feedback);
+        assert_eq!(correction.attempt.terminal, Some(Grade::Again));
+        // The app can show correct feedback now without recording a second grade.
     }
 }
