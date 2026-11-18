@@ -15,7 +15,9 @@ pub mod attempt_status;
 pub mod availability;
 pub mod check_open;
 pub mod exercise;
+mod give_up;
 pub mod grade_step;
+
 pub mod grader;
 pub mod grader_start;
 pub mod grading_error;
@@ -37,7 +39,9 @@ pub use attempt::Attempt;
 pub use attempt_status::AttemptStatus;
 pub use availability::Availability;
 pub use exercise::Exercise;
+pub use give_up::give_up;
 pub use grade_step::GradeStep;
+
 pub use grader::Grader;
 pub use grader_start::GraderStart;
 pub use grading_error::GradingError;
