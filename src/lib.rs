@@ -39,7 +39,7 @@ pub use attempt::Attempt;
 pub use attempt_status::AttemptStatus;
 pub use availability::Availability;
 pub use exercise::Exercise;
-pub use give_up::give_up;
+pub use give_up::{concede, give_up};
 pub use grade_step::GradeStep;
 
 pub use grader::Grader;
