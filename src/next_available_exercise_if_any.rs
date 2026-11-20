@@ -6,7 +6,8 @@
 //! shorter public alias for this same function.
 
 use crate::{
-    Attempt, AttemptStatus, Availability, Grader, NextResult, QuestionSource, StartError, Started,
+    Attempt, AttemptStatus, Availability, Exercise, Grader, GradingError, NextResult,
+    QuestionSource, StartError, Started,
 };
 use tempo_types::{AttemptId, DatasetId, Revision};
 
@@ -28,11 +29,21 @@ where
         Availability::Empty => return Ok(Availability::Empty),
         Availability::Ready(exercise) => exercise,
     };
-    let start = grader
-        .start(&exercise.definition)
-        .map_err(StartError::Grading)?;
-    let attempt = Attempt {
-        id,
+    let attempt =
+        start_selected_exercise(&exercise, grader, dataset, || id).map_err(StartError::Grading)?;
+    Ok(Availability::Ready(Started { exercise, attempt }))
+}
+
+/// Initialize an already selected exercise using the same path as a QuestionSource.
+pub fn start_selected_exercise<G: Grader + ?Sized>(
+    exercise: &Exercise<G::Definition>,
+    grader: &G,
+    dataset: DatasetId,
+    id: impl FnOnce() -> AttemptId,
+) -> Result<Attempt<G::State, G::Prompt>, GradingError> {
+    let start = grader.start(&exercise.definition)?;
+    Ok(Attempt {
+        id: id(),
         dataset,
         target: exercise.target.clone(),
         content_version: exercise.version,
@@ -41,8 +52,7 @@ where
         prompt: Some(start.prompt),
         terminal: None,
         status: AttemptStatus::Active,
-    };
-    Ok(Availability::Ready(Started { exercise, attempt }))
+    })
 }
 
 #[cfg(test)]
