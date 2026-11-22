@@ -3,10 +3,8 @@
 //! A two-choice question makes Study's generic behavior visible without chess.
 
 use crate::{
-    Attempt, Availability, Exercise, GradeStep, Grader, GraderStart, GradingError, QuestionSource,
-    next,
+    Attempt, Exercise, GradeStep, Grader, GraderStart, GradingError, start_selected_exercise,
 };
-use std::convert::Infallible;
 use tempo_types::{ContentVersion, Grade};
 
 pub(crate) struct ChoiceGrader;
@@ -52,21 +50,6 @@ impl Grader for ChoiceGrader {
     }
 }
 
-pub(crate) struct OneExercise(pub Option<Exercise<char>>);
-
-impl QuestionSource for OneExercise {
-    type Definition = char;
-    type Error = Infallible;
-
-    fn next(&mut self) -> Result<Availability<Exercise<char>>, Infallible> {
-        Ok(self
-            .0
-            .take()
-            .map(Availability::Ready)
-            .unwrap_or(Availability::Empty))
-    }
-}
-
 pub(crate) fn choice_exercise() -> Exercise<char> {
     Exercise {
         target: "choice".into(),
@@ -76,15 +59,8 @@ pub(crate) fn choice_exercise() -> Exercise<char> {
 }
 
 pub(crate) fn issued_choice() -> Attempt<(), String> {
-    let mut source = OneExercise(Some(choice_exercise()));
-    let Availability::Ready(started) = next(
-        &mut source,
-        &ChoiceGrader,
-        "dataset".into(),
-        "attempt".into(),
-    )
-    .unwrap() else {
-        panic!("fixture exercise is ready");
-    };
-    started.attempt
+    start_selected_exercise(&choice_exercise(), &ChoiceGrader, "dataset".into(), || {
+        "attempt".into()
+    })
+    .unwrap()
 }
